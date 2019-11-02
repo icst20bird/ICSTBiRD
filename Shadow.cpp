@@ -2181,6 +2181,7 @@ if (!first_run)
 				PIN_SafeCopy(&value_w1, addr_ptr1, sizeof(int));
 				cout << "Read after: checking values at address " << *ad <<" "<< value_w1 << " " << &value_w1 << endl;
 			}
+			ThreadLocalData *tld = getTLS(tid);
 			if (reached_breakpoint && !done)
 			{
 			    for (std::deque<relax_info>::iterator it = relax_ds.begin(); it != relax_ds.end(); ++it)
@@ -2198,12 +2199,20 @@ if (!first_run)
 					    PIN_SafeCopy(addr_ptr, value_new, sizeof(int));
 					    done = true;
 					    second_done = true;
+					    tld->currentVectorClock->event();
+				            write_element.tid = wr->tid;
+					    write_element.vc = tld->currentVectorClock;
+					    write_element.addr = wr->memOp;
+					    write_element.i_count = wr->i_count1;
+					    write_element.type = 'w';
+					    b.event = write_element;
+					    bt_table.push_back(b);
 					}
 				    }		
 			        }
 			    }
 			}
-			ThreadLocalData *tld = getTLS(tid);
+			
 			if ((tid == tid2) && (tld->insCount == count2))
 			{
 				for (std::deque<relax_info>::iterator it = relax_ds.begin(); it != relax_ds.end(); ++it)
@@ -2567,6 +2576,7 @@ if (!first_run)
 				cout << "write after: checking values at address " << *ad <<" "<< value_w1 << " " << &value_w1 << endl;
 				PIN_UnlockClient();
 			}
+			ThreadLocalData* tld = getTLS(tid);
 			if (reached_breakpoint && !done)
 			{
 			    for (std::deque<relax_info>::iterator it = relax_ds.begin(); it != relax_ds.end(); ++it)
@@ -2584,12 +2594,20 @@ if (!first_run)
 					    PIN_SafeCopy(addr_ptr, value_new, sizeof(int));
 					    done = true;
 					    second_done = true;
+					    tld->currentVectorClock->event();
+				            write_element.tid = wr->tid;
+					    write_element.vc = tld->currentVectorClock;
+					    write_element.addr = wr->memOp;
+					    write_element.i_count = wr->i_count1;
+					    write_element.type = 'w';
+					    b.event = write_element;
+					    bt_table.push_back(b);
 					}
 				    }		
 			        }
 			    }
 			}
-			ThreadLocalData* tld = getTLS(tid);
+			
 			if ((tid == tid2) && (tld->insCount == count2))
 			{
 				for (std::deque<relax_info>::iterator it = relax_ds.begin(); it != relax_ds.end(); ++it)
