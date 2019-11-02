@@ -1929,7 +1929,11 @@ if (!first_run)
 				    cout << "Done" << endl;
 				    second_done = true;
 				    done = true;
-				}    
+				} 
+				else
+				{
+				    cout << "Not Done: to be relaxed" << endl;
+				}   
 			}
 			for (std::deque<sleep_element>::iterator se = race_sleep.begin(); se != race_sleep.end(); ++se)
 			{
@@ -2176,6 +2180,28 @@ if (!first_run)
 				ADDRINT value_w1;
 				PIN_SafeCopy(&value_w1, addr_ptr1, sizeof(int));
 				cout << "Read after: checking values at address " << *ad <<" "<< value_w1 << " " << &value_w1 << endl;
+			}
+			if (reached_breakpoint && !done)
+			{
+			    for (std::deque<relax_info>::iterator it = relax_ds.begin(); it != relax_ds.end(); ++it)
+			    {
+			        if ((it->tid1 == tid2) && (it->count1 == count2) && (!it->executed1) && (! done))
+			        {
+			            for (std::deque<writeRelax>::iterator wr = writeRelaxQueue.begin(); wr != writeRelaxQueue.end(); ++wr)
+				    {
+					if ((wr->tid == it->tid1) && (wr->i_count1 == it->count1) && (!wr->executed1))
+					{
+					    it->executed1 = true;
+					    wr->executed1 = true;
+					    ADDRINT * addr_ptr = (ADDRINT*) wr->memOp;
+					    ADDRINT * value_new = (ADDRINT*) &wr->value;
+					    PIN_SafeCopy(addr_ptr, value_new, sizeof(int));
+					    done = true;
+					    second_done = true;
+					}
+				    }		
+			        }
+			    }
 			}
 			ThreadLocalData *tld = getTLS(tid);
 			if ((tid == tid2) && (tld->insCount == count2))
@@ -2534,10 +2560,34 @@ if (!first_run)
 
 			for (std::list<ADDRINT>::iterator ad = addresses.begin(); ad != addresses.end(); ++ad)
 			{
+				PIN_LockClient();
 				ADDRINT * addr_ptr1 = (ADDRINT*) *ad;
 				ADDRINT value_w1;
 				PIN_SafeCopy(&value_w1, addr_ptr1, sizeof(int));
 				cout << "write after: checking values at address " << *ad <<" "<< value_w1 << " " << &value_w1 << endl;
+				PIN_UnlockClient();
+			}
+			if (reached_breakpoint && !done)
+			{
+			    for (std::deque<relax_info>::iterator it = relax_ds.begin(); it != relax_ds.end(); ++it)
+			    {
+			        if ((it->tid1 == tid2) && (it->count1 == count2) && (!it->executed1) && (! done))
+			        {
+			            for (std::deque<writeRelax>::iterator wr = writeRelaxQueue.begin(); wr != writeRelaxQueue.end(); ++wr)
+				    {
+					if ((wr->tid == it->tid1) && (wr->i_count1 == it->count1) && (!wr->executed1))
+					{
+					    it->executed1 = true;
+					    wr->executed1 = true;
+					    ADDRINT * addr_ptr = (ADDRINT*) wr->memOp;
+					    ADDRINT * value_new = (ADDRINT*) &wr->value;
+					    PIN_SafeCopy(addr_ptr, value_new, sizeof(int));
+					    done = true;
+					    second_done = true;
+					}
+				    }		
+			        }
+			    }
 			}
 			ThreadLocalData* tld = getTLS(tid);
 			if ((tid == tid2) && (tld->insCount == count2))
@@ -2613,13 +2663,16 @@ if (!first_run)
 			}
 			for (std::deque<writeRelax>::iterator wr = writeRelaxQueue.begin(); wr != writeRelaxQueue.end(); ++wr)
 			{
+				cout << "check second instr" << endl;
 				if ((wr->tid == curr_state.tid) && (wr->i_count1 == curr_state.count) && (!executed))
 				{
+					cout << "check second instr " << endl;
 					for (std::deque<relax_info>::iterator it = relax_ds.begin(); it != relax_ds.end(); ++it)
 					{
 						if ((it->tid1 == wr->tid) && (it->count1 == wr->i_count1))
 						{
 							it->executed1 = true;
+							break;
 						}
 
 					}
@@ -3340,8 +3393,7 @@ if (!first_run)
 					if (IMG_Valid (img))
 						img_name = IMG_Name(img);
 					if ((!IMG_IsMainExecutable(img)) && (img_name.find("zlib") == std::string::npos))
-						{cout << "GOOOOO: " << img_name << endl;
-						return;}
+						return;
 
 					RTN pmlRtn = RTN_FindByName(img, PTHREAD_CREATE);
 					if (RTN_Valid(pmlRtn) && PIN_IsApplicationThread() )
@@ -3697,9 +3749,9 @@ if (!first_run)
 							{
 	//error::(ss->vc->areConcurrent(es->event.vc))
 			/*If there's a race: skip*/
-								//cout << "ss vc: " << ss->tid <<" " << ss->i_count << " "<< ss->vc << endl;
-								//cout << "es vc: " << es->event.tid << " " << es->event.i_count <<" "<<es->event.vc << endl;
-								//cout << "VC1: check" <<ss->vc->areConcurrent(es->event.vc)<< endl;error
+								cout << "ss vc: " << ss->tid <<" " << ss->i_count << " "<< ss->vc << endl;
+								cout << "es vc: " << es->event.tid << " " << es->event.i_count <<" "<<es->event.vc << endl;
+								cout << "VC1: check" <<ss->vc->areConcurrent(es->event.vc)<< endl;//error
 								if ((!((ss->vc->areConcurrent(es->event.vc)) && (ss->type == 'w' || es->event.type == 'w') && (ss->tid != es->event.tid) && (ss->addr == es->event.addr))) || ((es->event.tid == tid2) && (es->event.i_count == count2)) && (!(isLockAddr(ss->addr)))&& (!(isLockAddr(es->event.addr))))
 								{
 									bool has_sleep = false,present=false;
